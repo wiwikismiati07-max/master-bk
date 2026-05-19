@@ -1,0 +1,8 @@
+{
+  "name": "SIM BK - Siswa Asuh",
+  "description": "Sistem Informasi Manajemen Bimbingan Konseling untuk pendataan siswa asuh, transaksi bimbingan, dan pelaporan interaktif.",
+  "requestFramePermissions": [],
+  "majorCapabilities": [
+    "MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"
+  ]
+}
