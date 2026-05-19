@@ -10,8 +10,11 @@ export default function ReportView() {
         fetch('/api/transactions')
       ]);
 
-      const students = await studentsRes.json();
-      const transactions = await transRes.json();
+      const studentsDataRaw = await studentsRes.json();
+      const transactionsDataRaw = await transRes.json();
+
+      const students = Array.isArray(studentsDataRaw) ? studentsDataRaw : [];
+      const transactions = Array.isArray(transactionsDataRaw) ? transactionsDataRaw : [];
 
       const wb = XLSX.utils.book_new();
       

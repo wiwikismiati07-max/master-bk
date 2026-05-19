@@ -38,16 +38,18 @@ export default function App() {
         )}
       >
         <div className="p-6 flex items-center gap-3">
-          <div className="w-10 h-10 bg-[#1D1D1F] rounded-xl flex items-center justify-center shrink-0">
-            <GraduationCap className="text-white w-6 h-6" />
-          </div>
+          <img 
+            src="https://iili.io/KDFk4fI.png" 
+            alt="Logo" 
+            className="w-10 h-10 object-contain shrink-0"
+          />
           {isSidebarOpen && (
             <motion.span 
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
-              className="font-bold text-xl tracking-tight"
+              className="font-bold text-base leading-tight tracking-tight text-[#1D1D1F]"
             >
-              SIM BK
+              Siswa Asuh <br/> Layanan BK
             </motion.span>
           )}
         </div>

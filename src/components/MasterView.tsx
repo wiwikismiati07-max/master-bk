@@ -1,7 +1,8 @@
 import React, { useState, useEffect } from 'react';
-import { Plus, Search, Filter, MoreHorizontal, UserPlus, X } from 'lucide-react';
+import { Plus, Search, Filter, MoreHorizontal, UserPlus, X, FileUp } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { Student } from '../types';
+import * as XLSX from 'xlsx';
 
 export default function MasterView() {
   const [students, setStudents] = useState<Student[]>([]);
@@ -11,8 +12,7 @@ export default function MasterView() {
     nis: '',
     name: '',
     class_name: '',
-    gender: 'L',
-    bk_teacher: ''
+    gender: 'L'
   });
 
   useEffect(() => {
@@ -38,9 +38,57 @@ export default function MasterView() {
       body: JSON.stringify(formData)
     }).then(() => {
       setIsFormOpen(false);
-      setFormData({ nis: '', name: '', class_name: '', gender: 'L', bk_teacher: '' });
+      setFormData({ nis: '', name: '', class_name: '', gender: 'L' });
       fetchStudents();
     });
+  };
+
+  const handleImportExcel = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    const reader = new FileReader();
+    reader.onload = (evt) => {
+      try {
+        const bstr = evt.target?.result;
+        const wb = XLSX.read(bstr, { type: 'binary' });
+        const wsname = wb.SheetNames[0];
+        const ws = wb.Sheets[wsname];
+        const data = XLSX.utils.sheet_to_json(ws);
+        
+        const studentsToImport = data.map((row: any) => ({
+          nis: String(row.NIS || row.nis || ''),
+          name: String(row.Nama || row.Nama_Lengkap || row.name || ''),
+          class_name: String(row.Kelas || row.class_name || ''),
+          gender: String(row.Gender || row.LP || row.gender || 'L').toUpperCase().startsWith('P') ? 'P' : 'L'
+        })).filter(s => s.nis && s.name);
+
+        if (studentsToImport.length > 0) {
+          fetch('/api/students', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(studentsToImport)
+          }).then(() => {
+            fetchStudents();
+            alert(`Berhasil mengimport ${studentsToImport.length} siswa.`);
+          });
+        } else {
+          alert('Format Excel tidak sesuai atau data kosong. Pastikan ada kolom NIS, Nama, Kelas, Gender, Guru BK');
+        }
+      } catch (err) {
+        console.error(err);
+        alert('Gagal membaca file Excel.');
+      }
+    };
+    reader.readAsBinaryString(file);
+    // Reset input
+    e.target.value = '';
+  };
+
+  const fileInputRef = React.useRef<HTMLInputElement>(null);
+
+  const handleImportClick = () => {
+    fileInputRef.current?.click();
   };
 
   return (
@@ -54,17 +102,31 @@ export default function MasterView() {
             className="flex-1 bg-transparent border-none focus:outline-none text-sm"
           />
         </div>
-        <button 
-          onClick={() => setActiveView('master')} // Fixed to switch view if needed
-          className="bg-[#1D1D1F] text-white px-6 py-3 rounded-2xl font-medium flex items-center gap-2 hover:shadow-lg transition-all shrink-0"
-          onClickCapture={(e) => {
-            e.stopPropagation();
-            setIsFormOpen(true);
-          }}
-        >
-          <UserPlus className="w-5 h-5" />
-          Tambah Siswa
-        </button>
+        <div className="flex items-center gap-3">
+          <input 
+            type="file" 
+            ref={fileInputRef}
+            accept=".xlsx, .xls" 
+            className="hidden" 
+            onChange={handleImportExcel}
+          />
+          <button 
+            type="button"
+            onClick={handleImportClick}
+            className="bg-white border border-[#E5E5E7] text-[#1D1D1F] px-6 py-3 rounded-2xl font-medium flex items-center gap-2 hover:bg-[#F5F5F7] transition-all"
+          >
+            <FileUp className="w-5 h-5 text-[#0066CC]" />
+            <span>Import Excel</span>
+          </button>
+          <button 
+            type="button"
+            className="bg-[#1D1D1F] text-white px-6 py-3 rounded-2xl font-medium flex items-center gap-2 hover:shadow-lg transition-all shrink-0"
+            onClick={() => setIsFormOpen(true)}
+          >
+            <UserPlus className="w-5 h-5" />
+            <span>Tambah Siswa</span>
+          </button>
+        </div>
       </div>
 
       <div className="bg-white rounded-3xl border border-[#E5E5E7] overflow-hidden shadow-sm">
@@ -76,24 +138,22 @@ export default function MasterView() {
                 <th className="px-6 py-4 text-xs font-semibold text-[#86868B] uppercase tracking-wider">Nama Lengkap</th>
                 <th className="px-6 py-4 text-xs font-semibold text-[#86868B] uppercase tracking-wider">Kelas</th>
                 <th className="px-6 py-4 text-xs font-semibold text-[#86868B] uppercase tracking-wider">L/P</th>
-                <th className="px-6 py-4 text-xs font-semibold text-[#86868B] uppercase tracking-wider">Guru BK</th>
                 <th className="px-6 py-4 text-xs font-semibold text-[#86868B] uppercase tracking-wider">Aksi</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-[#E5E5E7]">
               {loading ? (
-                <tr><td colSpan={6} className="px-6 py-10 text-center text-[#86868B]">Memuat data...</td></tr>
+                <tr><td colSpan={5} className="px-6 py-10 text-center text-[#86868B]">Memuat data...</td></tr>
               ) : students.length === 0 ? (
-                <tr><td colSpan={6} className="px-6 py-10 text-center text-[#86868B]">Belum ada data siswa.</td></tr>
+                <tr><td colSpan={5} className="px-6 py-10 text-center text-[#86868B]">Belum ada data siswa.</td></tr>
               ) : students.map((student) => (
                 <tr key={student.id} className="hover:bg-[#F5F5F7]/50 transition-colors group">
                   <td className="px-6 py-4 font-mono text-xs">{student.nis}</td>
                   <td className="px-6 py-4 font-semibold">{student.name}</td>
-                  <td className="px-6 py-4">
+                  <td className="px-6 py-4 text-sm text-[#86868B]">
                     <span className="px-3 py-1 bg-[#F5F5F7] rounded-full text-xs font-medium">{student.class_name}</span>
                   </td>
                   <td className="px-6 py-4">{student.gender}</td>
-                  <td className="px-6 py-4 text-sm text-[#86868B]">{student.bk_teacher}</td>
                   <td className="px-6 py-4">
                     <button className="p-2 hover:bg-white rounded-lg border border-transparent hover:border-[#E5E5E7] transition-all">
                       <MoreHorizontal className="w-4 h-4" />
@@ -164,25 +224,14 @@ export default function MasterView() {
                   />
                 </div>
 
-                <div className="grid grid-cols-2 gap-4">
-                  <div className="space-y-1">
-                    <label className="text-xs font-bold text-[#86868B] uppercase">Kelas</label>
-                    <input 
-                      required 
-                      className="w-full bg-[#F5F5F7] border-none rounded-xl px-4 py-3 focus:ring-2 ring-black/5"
-                      value={formData.class_name}
-                      onChange={(e) => setFormData({...formData, class_name: e.target.value})}
-                    />
-                  </div>
-                  <div className="space-y-1">
-                    <label className="text-xs font-bold text-[#86868B] uppercase">Guru BK</label>
-                    <input 
-                      required 
-                      className="w-full bg-[#F5F5F7] border-none rounded-xl px-4 py-3 focus:ring-2 ring-black/5"
-                      value={formData.bk_teacher}
-                      onChange={(e) => setFormData({...formData, bk_teacher: e.target.value})}
-                    />
-                  </div>
+                <div className="space-y-1">
+                  <label className="text-xs font-bold text-[#86868B] uppercase">Kelas</label>
+                  <input 
+                    required 
+                    className="w-full bg-[#F5F5F7] border-none rounded-xl px-4 py-3 focus:ring-2 ring-black/5"
+                    value={formData.class_name}
+                    onChange={(e) => setFormData({...formData, class_name: e.target.value})}
+                  />
                 </div>
 
                 <button className="w-full bg-[#1D1D1F] text-white py-4 rounded-xl font-bold hover:shadow-xl hover:shadow-black/20 transition-all active:scale-[0.98]">

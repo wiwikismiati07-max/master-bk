@@ -17,7 +17,10 @@ export default function TransactionView() {
 
   useEffect(() => {
     fetchSessions();
-    fetch('/api/students').then(res => res.json()).then(data => setStudents(data));
+    fetch('/api/students')
+      .then(res => res.json())
+      .then(data => setStudents(Array.isArray(data) ? data : []))
+      .catch(() => setStudents([]));
   }, []);
 
   const fetchSessions = () => {

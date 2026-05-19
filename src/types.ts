@@ -4,7 +4,6 @@ export interface Student {
   name: string;
   class_name: string;
   gender: 'L' | 'P';
-  bk_teacher: string;
 }
 
 export interface Transaction {
